@@ -111,8 +111,14 @@ def alphabeta(
     maximize = state.to_move == root_player
     best, best_action = (-float("inf") if maximize else float("inf")), None
     for action in ctx.ordered(order_actions, state, root_player):
-        value, _ = minimax(ctx.child(state, action), depth - 1, root_player,
-                            ctx, evaluate, order_actions)
+        value, _ = alphabeta(ctx.child(state, action), depth - 1, alpha, beta, root_player,
+                            ctx)
         if best_action is None or (value > best if maximize else value < best):
             best, best_action = value, action
+        if maximize:
+            alpha = max(alpha, value)
+        else:
+            beta = min(beta, value)
+        if alpha >= beta:
+            break
     return best, best_action
