@@ -103,4 +103,16 @@ def alphabeta(
     Use ctx.ordered(order_actions, state, root_player) to validate move ordering.
     Let BudgetExceeded propagate to the provided iterative-deepening wrapper.
     """
-    raise NotImplementedError("Implement Alpha-Beta; first read minimax in connect4/search.py")
+    terminal = state.terminal_score(root_player)
+    if terminal is not None:
+        return terminal, None
+    if depth == 0:
+        return ctx.evaluate(evaluate, state, root_player), None
+    maximize = state.to_move == root_player
+    best, best_action = (-float("inf") if maximize else float("inf")), None
+    for action in ctx.ordered(order_actions, state, root_player):
+        value, _ = minimax(ctx.child(state, action), depth - 1, root_player,
+                            ctx, evaluate, order_actions)
+        if best_action is None or (value > best if maximize else value < best):
+            best, best_action = value, action
+    return best, best_action
