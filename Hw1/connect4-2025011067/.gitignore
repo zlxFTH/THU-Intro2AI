@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+out/
+LOCAL_APPDATA_FONTCONFIG_CACHE/
+.coverage
+.env
+.env.*
+
+# Local enrollment identities and GitHub App keys
+student_account.csv
+*.pem

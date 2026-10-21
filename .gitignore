@@ -1,2 +1,20 @@
+# 课程讲义（体积大，不入库）
 Slides/*
+
+# 系统与编辑器
 .DS_Store
+
+# Python 产物
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# LaTeX 中间产物
+Hw1/report/main.aux
+Hw1/report/main.log
+
+# 打包中间产物（zip 由 report/report_2025011067.pdf 生成）
+Hw1/report_2025011067.pdf
+Hw1/2025011067.zip

@@ -25,6 +25,8 @@
 \lhead{Lixi Zhang}
 \rhead{2025011067}
 
+\setlength{\emergencystretch}{3em}
+
 \begin{document}
 \maketitle
 
@@ -50,16 +52,18 @@ than $h_i$.
 \subsubsection*{(c) Admissible candidates}
 
 \begin{center}
-\begin{tabular}{lll}
+\begin{tabular}{@{}llp{0.52\linewidth}@{}}
     \toprule
     candidate & admissible & reason \\
     \midrule
-    (i) $\sum_i h_i$     & no & $n=3$, cars $(1,1),(1,2),(1,3)$: $\sum_i h_i = 6$, true cost $5$ \\
-    (ii) $\min_i h_i$    & \textbf{yes} & each car needs $\lceil h_j/2\rceil$ moves, hence
-                                            $h^{*}\ge n\lceil \min_i h_i/2\rceil \ge \min_i h_i$ \\
-    (iii) $\max_i h_i$   & no & $n=3$, cars $(1,1),(2,3),(1,2)$: $\max_i h_i = 4$, true cost $3$ \\
-    (iv) $n\min_i h_i$   & no & $n=3$, cars $(1,1),(2,1),(2,2)$: $n\min_i h_i = 6$, true cost $5$ \\
-    (v) $n\max_i h_i$    & no & $n=3$, cars $(1,1),(2,1),(2,2)$: $n\max_i h_i = 12$, true cost $5$ \\
+    (i) $\sum_i h_i$       & no  & $n=3$, cars $(1,1),(1,2),(1,3)$: $\sum_i h_i = 6$, true cost $5$ \\
+    (ii) $\min_i h_i$      & \textbf{yes} & each car needs at least $\lceil h_j/2\rceil$ moves,
+                                            hence $h^{*}\ge n\lceil \min_i h_i/2\rceil \ge \min_i h_i$ \\
+    (iii) $\max_i h_i$     & no  & $n=3$, cars $(1,1),(2,3),(1,2)$: $\max_i h_i = 4$, true cost $3$ \\
+    (iv) $(h_1,\dots,h_n)$ & no  & componentwise it inherits (b) --- a hop covers two cells at cost
+                                   $1$, so $h_i$ may exceed the cost of car $i$; a vector also gives no
+                                   total order on the fringe \\
+    (v) $n\max_i h_i$      & no  & $n=3$, cars $(1,1),(2,1),(2,2)$: $n\max_i h_i = 12$, true cost $5$ \\
     \bottomrule
 \end{tabular}
 \end{center}
@@ -123,7 +127,8 @@ expanded.
 \needspace{0.68\textheight}
 \subsection*{Q2.3 Uniform-cost search}
 The fringe is a priority queue keyed on $g$, and the goal test is applied on
-dequeue (\texttt{ucs\_5\_goalAtDequeue}). With unit step costs UCS coincides
+dequeue, as the \texttt{goalAtDequeue} case checks. With unit step costs UCS
+coincides
 with BFS; with the exponential costs of \texttt{StayEastSearchAgent}
 ($0.5^{x}$, \texttt{mediumDottedMaze}) and \texttt{StayWestSearchAgent}
 ($2^{x}$, \texttt{mediumScaryMaze}) Pacman hugs the east and the west side
@@ -190,7 +195,109 @@ credit.
 % ===========================================================================
 \clearpage
 \section*{Q3}
-% TODO: Programming Component 2 (Connect Four) --- Stage 1/2/3 screenshots and
-%       the requested short analysis.
+
+\needspace{0.6\textheight}
+\subsection*{Q3.1 Alpha--beta search}
+The score is kept in the fixed \texttt{root\_player} perspective, terminal states
+are tested before the depth cutoff, and every successor is generated through
+\texttt{ctx.child}, so the shared budget is charged exactly once per successor.
+\texttt{alpha} is raised when the root player is to move and \texttt{beta} is
+lowered otherwise; the loop breaks as soon as $\alpha \ge \beta$.
+\texttt{BudgetExceeded} is left to propagate to the iterative-deepening wrapper.
+
+\begin{center}
+\begin{tabular}{lrrr}
+    \toprule
+    depth & minimax successors & Alpha--beta successors & value \\
+    \midrule
+    2 & 56  & 32  & 6 \\
+    3 & 399 & 147 & 9 \\
+    4 & 2000 (budget exhausted) & 523 & 6 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Both searches return the same value at every depth; the saving is what lets
+depth 4 complete at all inside the 2000-successor budget.
+
+\begin{center}
+    \includegraphics[width=0.8\linewidth]{../screenshot/c4-stage1.png}
+\end{center}
+
+\needspace{0.6\textheight}
+\subsection*{Q3.2 Evaluation heuristic}
+\texttt{evaluate} scores the 69 four-cell windows: an open three for the root
+player is $+100$, an open three for the opponent is $-200$, and a window holding
+both colours is dead and contributes nothing. Doubling the defensive weight is
+what removed the baseline's worst decision.
+
+\begin{center}
+\begin{tabular}{lrrr}
+    \toprule
+    quantity & value \\
+    \midrule
+    central-column baseline regret & 307.0 \\
+    this heuristic                 & 165.0 \\
+    reduction                      & 142.0 (46.3\%) \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The remaining regret sits almost entirely in the fifth benchmark position (121
+of 165): two-in-a-row structures and double threats are not scored, so the
+heuristic cannot tell a move that creates two threats from a move that creates
+none.
+
+\begin{center}
+    \includegraphics[width=0.85\linewidth]{../screenshot/c4-stage2.png}
+\end{center}
+
+\needspace{0.6\textheight}
+\subsection*{Q3.3 Move ordering}
+Columns are ranked in tiers: immediate win, mandatory block, own open three,
+opponent open three, own two, then everything else. The line check only reads
+\texttt{state.at} from \texttt{state.landing\_row(col)} along the four axes, so
+ordering never calls \texttt{ctx.child} and costs no successor budget.
+
+\begin{center}
+\begin{tabular}{lr}
+    \toprule
+    quantity & value \\
+    \midrule
+    left-to-right baseline accuracy & 19.565\% (9/46 pairs) \\
+    this ordering                   & 73.913\% (34/46 pairs) \\
+    improvement                     & $+54.348\%$ \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Accuracy understates the effect, because better ordering is what makes pruning
+possible. Swapping only \texttt{order\_actions} (same search, same heuristic,
+same depth) gives:
+
+\begin{center}
+\begin{tabular}{lrrr}
+    \toprule
+    position & depth & left-to-right & this ordering \\
+    \midrule
+    $(3,2,4,2,5)$           & 4 & budget exhausted & 131 \\
+                            & 5 & budget exhausted & 314 \\
+    \addlinespace
+    $(3,2,3,2,4,1)$         & 4 & 732 & 190 \\
+                            & 5 & budget exhausted & 564 \\
+    \addlinespace
+    $(3,1,4,2,4,2,5,3)$     & 4 & 807 & 96 \\
+                            & 5 & budget exhausted & 383 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The returned values are identical in every row while the successor count drops
+by a factor of three to eight, and depths that exhaust the budget under the
+left-to-right order become reachable.
+
+\begin{center}
+    \includegraphics[width=0.85\linewidth]{../screenshot/c4-stage3.png}
+\end{center}
 
 \end{document}
