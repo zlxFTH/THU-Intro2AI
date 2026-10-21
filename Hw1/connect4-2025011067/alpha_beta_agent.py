@@ -44,10 +44,17 @@ def evaluate(state: State, root_player: int) -> float:
     """
     if state.kind != "board":
         return 0
-    return 3 * sum(
-        1 if state.at(row, 3) == root_player else -1 if state.at(row, 3) else 0
-        for row in range(6)
-    )
+    score = 0
+    for w in state.windows():
+        a = w.count(root_player)
+        b = w.count(3 - root_player)
+        if a and b:
+            continue
+        if a == 3:
+            score += 100
+        if b == 3:
+            score -= 200
+    return score
 
 
 def order_actions(
@@ -66,8 +73,37 @@ def order_actions(
         A permutation of actions. Earlier actions are searched first, and the
         first searched action wins ties. The default preserves the given order.
     """
-    return list(actions)
-
+    def border(r, c):
+        return r == -1 or r == 6 or c == -1 or c == 7
+    def win(r, c, lim, tar):
+        def go(dr, dc):
+            cnt = 0
+            nr = r
+            nc = c
+            while True:
+                nr += dr
+                nc += dc
+                if border(nr, nc) or state.at(nr, nc) != tar:
+                    break
+                cnt += 1
+            return cnt
+        return (go(1, 0) + go(-1, 0) >= lim or go(0, 1) + go(0, -1) >= lim
+                or go(1, 1) + go(-1, -1) >= lim or go(1, -1) + go(-1, 1) >= lim)
+    def priority(c):
+        r = state.landing_row(c)
+        rival = 3 - root_player
+        if win(r, c, 3, root_player) == True:
+            return 0
+        if win(r, c, 3, rival) == True: 
+            return 1
+        if win(r, c, 2, root_player) == True:
+            return 2
+        if win(r, c, 2, rival) == True: 
+            return 3
+        if win(r, c, 1, root_player) == True:
+            return 4
+        return 114514
+    return sorted(actions, key=priority)
 
 def alphabeta(
     state: State,
